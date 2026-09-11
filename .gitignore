@@ -3,3 +3,4 @@
 *.pkl
 *.zip
 *_init_*
+!*/data/*
