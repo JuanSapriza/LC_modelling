@@ -8,7 +8,7 @@ def make_adc():
         Vdd_V=1.0,
         Vss_V=0.0,
         Vm_V=0.5,
-        lsb_range_b=6,
+        lsb_range_b=4,
         lvl_distance_lsbs=1,
         lvl_offset_V=-5e-6,
         cmp_offset_V=1e-6,
