@@ -267,6 +267,7 @@ lc_voice_fs_Hz = len(lc_voice.time) / (voice.time[-1] - voice.time[0])
 
 from format.paper import *
 from scipy.ndimage import gaussian_filter1d
+from matplotlib.ticker import LogLocator
 
 signals = {
     "sin_slow": {
@@ -279,10 +280,10 @@ signals = {
         "lc_rate_Hz": lc_sin_slow_fs_Hz,
         "plot_window_s": (0.0, 0.14),
             "annotations": [
-                {"row": 0, "text": "fixed-rate samples",    "xytext": (0.57, 0.1)},
-                {"row": 1, "text": "level-crossing events", "xytext": (0.5, 0.17)},
-                {"row": 1, "text": "asymmetric response   \n↘", "xytext": (0.57, 0.75)},
-                {"row": 3, "text": "no slope asymmetry\n↘", "xytext": (0.87, 0.6)},
+                {"row": 0, "text": "fixed-rate samples",    "xytext": (0.57, 0.15), "bbox": dict(facecolor="white", edgecolor="none", alpha=0.75, pad=1)},
+                {"row": 1, "text": "level-crossing events", "xytext": (0.6, 0.17)},
+                {"row": 1, "text": "asymmetric response   \n↘", "xytext": (0.6, 0.75)},
+                {"row": 3, "text": "no slope asymmetry\n↘", "xytext": (0.8, 0.75)},
             ],
     },
     "ecg": {
@@ -295,8 +296,8 @@ signals = {
         "lc_rate_Hz": lc_ecg_fs_Hz,
         "plot_window_s": (0.18, 0.32),
         "annotations": [
-                {"row": 1, "text": "slope asymmetry\n↓", "xytext": (0.43, 0.75)},
-                {"row": 1, "text": "level discharge ↗", "xytext": (0.87, -0.17)},
+                {"row": 1, "text": "slope asymmetry\n↓", "xytext": (0.45, 0.75)},
+                {"row": 1, "text": "level discharge ↗", "xytext": (0.87, -0.1)},
             ],
     },
     # "sin_fast": {
@@ -332,13 +333,13 @@ signals = {
         "lc_rate_Hz": lc_voice_fs_Hz,
         "plot_window_s": (0.715, 0.73),
         "annotations": [
-             {"row": 1, "text": "slope overload →", "xytext": (0.43, 0.6)},
+             {"row": 1, "text": "slope overload\n↘", "xytext": (0.43, 0.65)},
         ],
     },
 }
 
 
-# Pre-compute P(V), P(V') and P(V,V')
+# Pre-compute P(V), P(\dot{V}) and P(V,\dot{V})
 # These are cheap and intentionally recomputed every time so plot formatting can
 # be iterated without rerunning any ADC simulation.
 
@@ -378,12 +379,15 @@ joint_vmax = np.max(joint_positive)
 joint_vmin = max(np.min(joint_positive), joint_vmax * 1e-4)
 joint_norm = LogNorm(vmin=joint_vmin, vmax=joint_vmax)
 
-FIGURE_HEIGHT_IN = 6.5
-fig, axs = subplots(5, len(signals), columns=2, height_in=FIGURE_HEIGHT_IN, squeeze=True, height_ratios=[1,1,1,1,1])
+FIGURE_HEIGHT_IN = 6
+fig, axs = subplots(5, len(signals), columns=2, height_in=FIGURE_HEIGHT_IN, squeeze=True, height_ratios=[1.75,1.75,1,1,1])
 
-row_labels = ["Fixed rate", "Level crossing", r"$P(V)$", r"$P(|V'|)$", r"$P(V,V')$"]
-row_xlabels = [r"$t$", r"$t$", r"$V$", r"$|V'|$", r"$V$"]
-row_ylabels = [r"$V$", r"$V$", r"$P(V)$", r"$P(V')$", r"$V'$"]
+for ax in axs[3][1:]:
+    ax.sharey(axs[3][0])
+
+row_labels = ["Fixed\nrate", "Level\ncrossing", "", "", ""]
+row_xlabels = [r"$t$", r"$t$", r"$V$", r"$|\dot{V}|$", r"$V$"]
+row_ylabels = [r"$V$", r"$V$", r"$P(V)$", r"$P(\dot{V})$", r"$\dot{V}$"]
 
 for c, config in enumerate(signals.values()):
 
@@ -455,21 +459,23 @@ for c, config in enumerate(signals.values()):
     # axs[2][c].fill_between(amplitude_centers, config["P_V"], step="mid", color=PALE_RED, alpha=0.75, linewidth=0)
     axs[2][c].plot(amplitude_centers, config["P_V"], color=BLOOD_RED, linewidth=2)
     axs[2][c].set_xlim(VSS_V, VDD_V)
-    axs[2][c].set_ylim(bottom=0)
+    p_v_max = np.max(config["P_V"])
+    axs[2][c].set_ylim(-0.08 * p_v_max, 1.12 * p_v_max)
 
     # ------------------------------------------------------------------
-    # P(V') -- positive and negative slopes overlaid as |V'|
+    # P(\dot{V}) -- positive and negative slopes overlaid as |\dot{V}|
     # ------------------------------------------------------------------
     derivative_centers = 0.5 * (config["DV_EDGES"][:-1] + config["DV_EDGES"][1:])
     probability_floor = 0.5 / len(signal.data)
-    axs[3][c].plot(derivative_centers, np.maximum(config["P_DV_POS"], probability_floor), color=BLOOD_RED, linestyle=":", linewidth=2, label=r"$\dot{V}>0$")
-    axs[3][c].plot(derivative_centers, np.maximum(config["P_DV_NEG"], probability_floor), color=BLACK, linestyle=":", linewidth=2, label=r"$\dot{V}<0$")
+    axs[3][c].plot(derivative_centers, np.maximum(config["P_DV_POS"], probability_floor), color=BLOOD_RED, linestyle=(0, (1, 1)), zorder=10,linewidth=2, label=r"$\dot{V}>0$")
+    axs[3][c].plot(derivative_centers, np.maximum(config["P_DV_NEG"], probability_floor), color=MID_GRAY, linestyle=(0, (1, 1)),  zorder=10,linewidth=2, label=r"$\dot{V}<0$")
     axs[3][c].set_yscale("log")
+    axs[3][c].margins(y=0.15)
     # axs[3][c].set_xscale("log")
     axs[3][c].set_xlim(config["DV_EDGES"][0], config["DV_EDGES"][-1])
 
     # ------------------------------------------------------------------
-    # P(V,V')
+    # P(V,\dot{V})
     # ------------------------------------------------------------------
     joint_mesh = axs[4][c].pcolormesh(joint_amplitude_edges,  config["JOINT_DV_EDGES"], config["P_V_DV"].T, cmap=HEATMAP_CMAP, norm=joint_norm, shading="auto", rasterized=True)
     axs[4][c].axhline(0, color=BLACK, linewidth=0.35, alpha=0.6)
@@ -491,36 +497,54 @@ for c, config in enumerate(signals.values()):
             va="center",
             fontsize=11,
             color=BLACK,
+            bbox=annotation.get("bbox", None),
         )
 
 
 
 
 # One compact legend is enough for the complete derivative row.
-legend = axs[3][0].legend(loc="upper left", borderpad=0.22, handlelength=1.5, handletextpad=0.35, labelspacing=0.18)
+legend = axs[3][3].legend(loc="upper right", borderpad=0.05, handlelength=1.5, handletextpad=0.35, labelspacing=0.18)
 style_legend(legend)
 
 # Same compact visual style as the supplied multi-column example.
 for r, label in enumerate(row_labels):
-    axs[r][0].set_ylabel(label + "\n" + row_ylabels[r], rotation=0, ha="right", va="center", labelpad=12)
+    axs[r][0].set_ylabel(row_ylabels[r], rotation=0, ha="right", va="bottom", y=0, labelpad=12)
+    if label:
+        axs[r][0].text(-0.12, 0.5, label, transform=axs[r][0].transAxes, ha="right", va="center")
     for ax in axs[r]:
-        ax.set_xlabel(row_xlabels[r], labelpad=1)
+        ax.set_xlabel(row_xlabels[r], loc="left", labelpad=3)
 
-colorbar = fig.colorbar(joint_mesh, ax=list(axs[4]), orientation="vertical", fraction=0.018, pad=0.012)
-colorbar.set_label(r"$P(V,V')$")
+for r, row in enumerate(axs):
+    for ax in row:
+        ax.set_xticks([])
+        if r == 3:
+            ax.yaxis.set_major_locator(LogLocator(base=10))
+            ax.set_axisbelow(True)
+            ax.grid(axis="y", which="major", color=VERY_LIGHT_GRAY, linewidth=0.6, alpha=0.8)
+        else:
+            ax.set_yticks([])
+        ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+        ax.set_facecolor("none")
 
-for ax in axs.flat:
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
-    ax.set_facecolor("none")
+fig.subplots_adjust(left=0.13, right=0.997, top=0.97, bottom=0.055, wspace=0.04, hspace=0.25)
 
-fig.subplots_adjust(left=0.095, right=0.955, top=0.97, bottom=0.055, wspace=0.04, hspace=0.16)
+joint_position = axs[4][0].get_position()
+colorbar_ax = fig.add_axes([joint_position.x0 - 0.045, joint_position.y0, 0.008, joint_position.height])
+colorbar = fig.colorbar(joint_mesh, cax=colorbar_ax, orientation="vertical")
+colorbar.set_label(r"$P(V,\dot{V})$")
+colorbar.set_ticks([])
+colorbar.ax.yaxis.set_label_position("left")
+
 
 #In[]
 #Save
+fig.canvas.draw()
 
-print(f"Saved: {FIGURE_FILE}")
-plt.tight_layout()
-savefig(fig, FIGURE_FILE)
-plt.show()
+fig.savefig(
+    FIGURE_FILE,
+    format="pdf",
+    facecolor="white",
+    transparent=False,
+    bbox_inches=None,
+)
