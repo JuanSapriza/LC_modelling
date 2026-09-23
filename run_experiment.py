@@ -52,7 +52,7 @@ SIMULATION = SimulationParameters(
         max_state_transitions_n=64,
     ),
     empirical=EmpiricalSimulationParameters(
-        sampling_frequency_Hz=5e6,
+        sampling_frequency_Hz=5e4,
         sampling_frequency_multiplier=1.0,
         duration_s=3,
     ),
@@ -99,8 +99,8 @@ ECG = load_signal(
 
 SINE_10HZ = generate_sine(
     frequency_Hz=10,
-    sampling_frequency_Hz=50_000,
-    duration_s=5,
+    sampling_frequency_Hz=1_000,
+    duration_s=1,
     amplitude_V=0.35,
     offset_V=0.5,
     name="sine_10hz",
@@ -123,8 +123,9 @@ SINC = generate_sinc(
 # Signals are the Timeseries objects created above.
 
 EXPERIMENTS = [
-    ("test_adc", ECG),
+    # ("test_adc", ECG),
     # ("test_adc", SINE_10HZ),
+    ("offinj_adc", SINE_10HZ),
     # ("test_adc", SINC),
     # ("rtvcm_adc", ECG),
 ]
@@ -133,10 +134,10 @@ EXPERIMENTS = [
 #In[]:
 # Execution controls
 
-CHARACTERIZE_ADC = True
+CHARACTERIZE_ADC = False
 RUN_EMPIRICAL = True
-RUN_STATISTICAL = True
-RUN_COMPARISON = True
+RUN_STATISTICAL = False
+RUN_COMPARISON = False
 FORCE_RECOMPUTE = False
 PLOT_RESULTS = True
 
