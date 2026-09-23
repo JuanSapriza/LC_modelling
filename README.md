@@ -1,4 +1,4 @@
-# LC Matrix — Pass 14
+# LC model
 
 ## Structure
 
