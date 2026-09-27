@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
+if str(ROOT.parent) not in sys.path:
+    sys.path.append(str(ROOT.parent))
 
 from adc.definitions.slope_range_adc import make_adc
 from format import paper
@@ -375,13 +377,13 @@ ax.plot(x_high_fit, (a_high * x_high_fit + b_high) * 1e3, color=FIT_COLOR, linew
 ax.axvline(slope_min_V_s, color=FIT_COLOR, linestyle=":", linewidth=0.9)
 ax.axvline(slope_max_V_s, color=FIT_COLOR, linestyle=":", linewidth=0.9)
 
-ax.text(slope_min_V_s, mean_w * 1.8e3, rf"$|\dot{{V}}|_{{\min}}={slope_min_V_s:.1f}$ V/s", rotation=0, va="bottom", ha="left", color=FIT_COLOR)
+ax.text(slope_min_V_s, mean_w * 1.8e3, rf"$|\dot{{V}}|_{{\min}}={slope_min_V_s:.0f}$ V/s", rotation=0, va="bottom", ha="left", color=FIT_COLOR)
 ax.text(slope_max_V_s, mean_w * 1.8e3, rf"$|\dot{{V}}|_{{\max}}={slope_max_V_s:.0f}$ V/s", rotation=0, va="bottom", ha="left", color=FIT_COLOR)
 
 # Figure formatting
 ax.set_xscale("log")
 ax.set_yscale("log")
-ax.set_xlim(MIN_SLOPE_V_S, MAX_SLOPE_V_S)
+ax.set_xlim(MIN_SLOPE_V_S*0.9, MAX_SLOPE_V_S*1.1)
 ax.set_xlabel(r"Input derivative magnitude $|\dot{V}|$ (V/s)")
 ax.set_ylabel(r"Effective level width $w$ (mV)")
 
@@ -389,6 +391,10 @@ ax.grid(True, which="major", linewidth=0.45, alpha=0.25)
 ax.grid(True, which="minor", linewidth=0.3, alpha=0.12)
 
 ax.legend(loc="lower right")
+
+import matplotlib.ticker as mticker
+ax.yaxis.set_major_formatter(mticker.FormatStrFormatter("%d"))
+
 
 fig.tight_layout()
 paper.savefig(fig, FIGURE_FILE)

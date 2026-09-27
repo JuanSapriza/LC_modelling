@@ -12,6 +12,8 @@ from matplotlib.colors import LogNorm
 ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
+if str(ROOT.parent) not in sys.path:
+    sys.path.append(str(ROOT.parent))
 
 # Some old signal files were pickled before Timeseries moved under tools/.
 import tools.timeseries as _timeseries_module

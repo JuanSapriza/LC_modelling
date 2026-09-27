@@ -11,6 +11,8 @@ from scipy.optimize import minimize_scalar
 ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
+if str(ROOT.parent) not in sys.path:
+    sys.path.append(str(ROOT.parent))
 
 from signals.generator import generate_sine
 from model.empirical import run_adc
