@@ -583,6 +583,9 @@ class LC_ADC:
         self.dir            = 0
         self.dirs           = []
         self.eb_dirs        = []
+        self.eb_lvls_V      = []            # level after each event (offset injection)
+        self._pending_step  = None          # (apply at t_s, +1/-1): decision travelling round the loop
+        self._busy_until_s  = -np.inf       # next decision only after the previous one is applied
         self.comps.reset()
         if getattr(self, "verbose", True):
             print("----------------------------")
@@ -592,6 +595,9 @@ class LC_ADC:
     def load_input_signal(self, input_signal):
         self.input_signal   = input_signal
         self.comps.cnt.out = int(np.clip(round((input_signal.data[0] - self.dp.Vss_V) / self.dp.lsb_V), 0, self.dp.lsb_n - 1))
+        if self.dp.res_gen_type == RES_GEN_TYPE.OFFSET_INJ:
+            # the level integrator starts where the counter starts (not at 0 V)
+            self.dac_out_V = self.lvl_V = self.dp.Vss_V + self.comps.cnt.out * self.dp.lsb_V
         if getattr(self, "verbose", True):
             print("----------------------------")
             print(f"🗃️ Loaded: {self.input_signal.name}")
@@ -625,8 +631,22 @@ class LC_ADC:
             # _, posedge, _   = clk_cnt.run(t_s)
             posedge                 = self.comps.rising.run(up or dn)
             self.comps.cnt.run( up, dn, posedge )
-            dac_code                = self.comps.loop_delay.run( t_s, self.comps.cnt.out )
-            self.dac_out_V         += self.dp.lsb_V*(up + -1*dn) - self.comps.discharge.run(t_s)
+            # Loop: a comparator decision reaches the level loop_delay_s later, and the
+            # next decision is taken only once it has been applied. While the comparator
+            # stays high the level therefore moves one LSB per loop cycle, so the fastest
+            # tracking is lsb_V / loop_delay_s, whatever the simulation step (keep the step
+            # <= loop_delay_s). With loop_delay_s = 0: one LSB per simulation step.
+            if self._pending_step is not None and t_s >= self._pending_step[0]:
+                self._apply_step(t_s, self._pending_step[1])
+                self._pending_step = None
+            step = int(up) - int(dn)
+            if step and self._pending_step is None and t_s >= self._busy_until_s:
+                if self.dp.loop_delay_s > 0:
+                    self._pending_step = (t_s + self.dp.loop_delay_s, step)
+                else:
+                    self._apply_step(t_s, step)
+                self._busy_until_s = t_s + self.dp.loop_delay_s
+            self.dac_out_V         -= self.comps.discharge.run(t_s)
             self.lvl_V              = self.dac_out_V
 
         res_V                       = self.dp.Vm_V + noisy_input - self.lvl_V
@@ -635,6 +655,13 @@ class LC_ADC:
         self.ress_V.append(res_V)
 
         return res_V
+
+    def _apply_step(self, t_s, step):
+        """Offset injection: move the level by one LSB and record one event per step."""
+        self.dac_out_V += self.dp.lsb_V * step
+        self.eb_txs_s.append(t_s)
+        self.eb_dirs.append(step < 0)
+        self.eb_lvls_V.append(self.dac_out_V)
 
     def comparison(self, t_s, res_V):
 
@@ -654,8 +681,9 @@ class LC_ADC:
             if not self.tx:
                 self.tx             = True
                 self.txs.append(1)
-                self.eb_txs_s.append(t_s)
-                self.eb_dirs.append(self.dir)
+                if self.dp.res_gen_type != RES_GEN_TYPE.OFFSET_INJ:   # OFFSET_INJ: see _apply_step
+                    self.eb_txs_s.append(t_s)
+                    self.eb_dirs.append(self.dir)
         else:
             self.tx                 = False
             self.txs.append(0)
@@ -700,6 +728,7 @@ class LC_ADC:
         self.dns            = np.array(self.dns)
         self.dirs           = np.array(self.dirs)
         self.eb_dirs        = np.array(self.eb_dirs)
+        self.eb_lvls_V      = np.array(self.eb_lvls_V)
 
     def backup(self, output_path, file_suffix):
         with open(output_path+self.name+file_suffix+".pkl",'wb+') as f:
