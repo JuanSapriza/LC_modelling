@@ -38,6 +38,10 @@ def load_adc_definition(root, name):
     if maker is None:
         raise AttributeError(f"{path} must define make_adc(), get_adc(), or get_definition().")
     obj = maker()
+    declared = getattr(obj, "name", None)
+    if declared is not None and declared != name:
+        print(f"Warning: {path.name}: make_adc() declares name '{declared}' but the file is loaded as '{name}'. "
+              f"ADCs are looked up by file name; rename the file or the name so they match.")
     # A definition-file edit must create a distinct ADC even if numerical fields happen to be unchanged.
     obj.name = name
     definition_hash = stable_id({"definition_name": name, "source_sha256": source_hash, "adc_parameters": getattr(obj, "dp", obj)})
