@@ -150,7 +150,7 @@ SINC = generate_sinc(
 # Signals are the Timeseries objects created above.
 
 EXPERIMENTS = [
-    ("test_adc", ECG),
+    # ("test_adc", ECG),
     # ("test_adc", SINE_10HZ),
     ("offinj_adc", SINE_10HZ),
     ("offinj_adc", SINE_60HZ),
@@ -163,10 +163,10 @@ EXPERIMENTS = [
 #In[]:
 # Execution controls
 
-CHARACTERIZE_ADC = True
+CHARACTERIZE_ADC = False
 RUN_EMPIRICAL = True
-RUN_STATISTICAL = True
-RUN_COMPARISON = True
+RUN_STATISTICAL = False
+RUN_COMPARISON = False
 FORCE_RECOMPUTE = False
 PLOT_RESULTS = True
 
