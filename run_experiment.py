@@ -44,7 +44,7 @@ SIMULATION = SimulationParameters(
         second_derivative_max_V_s2=None,
     ),
     statistical=StatisticalSimulationParameters(
-        model_order="D1",                  # "W", "D0", "D1" or "D2"
+        model_order="W",                  # "W", "D0", "D1" or "D2"
         headstart_bins_n=127,
         reversal_error_bins_n=127,
         crossing_time_bins_n=192,
@@ -52,7 +52,7 @@ SIMULATION = SimulationParameters(
         max_state_transitions_n=64,
     ),
     empirical=EmpiricalSimulationParameters(
-        sampling_frequency_Hz=5e4,
+        sampling_frequency_Hz=1e5,
         sampling_frequency_multiplier=1.0,
         duration_s=3,
     ),
@@ -99,11 +99,38 @@ ECG = load_signal(
 
 SINE_10HZ = generate_sine(
     frequency_Hz=10,
-    sampling_frequency_Hz=1_000,
-    duration_s=1,
+    sampling_frequency_Hz=10_000,
+    duration_s=0.3,
     amplitude_V=0.35,
     offset_V=0.5,
     name="sine_10hz",
+)
+
+SINE_60HZ = generate_sine(
+    frequency_Hz=60,
+    sampling_frequency_Hz=10_000,
+    duration_s=0.05,
+    amplitude_V=0.35,
+    offset_V=0.5,
+    name="sine_60hz",
+)
+
+SINE_100HZ = generate_sine(
+    frequency_Hz=100,
+    sampling_frequency_Hz=10_000,
+    duration_s=0.03,
+    amplitude_V=0.35,
+    offset_V=0.5,
+    name="sine_100hz",
+)
+
+SINE_500HZ = generate_sine(
+    frequency_Hz=500,
+    sampling_frequency_Hz=10_000,
+    duration_s=0.02,
+    amplitude_V=0.35,
+    offset_V=0.5,
+    name="sine_500hz",
 )
 
 SINC = generate_sinc(
@@ -126,6 +153,8 @@ EXPERIMENTS = [
     # ("test_adc", ECG),
     # ("test_adc", SINE_10HZ),
     ("offinj_adc", SINE_10HZ),
+    ("offinj_adc", SINE_60HZ),
+    # ("offinj_adc", SINE_500HZ),
     # ("test_adc", SINC),
     # ("rtvcm_adc", ECG),
 ]
@@ -152,7 +181,7 @@ if SIMULATION.runtime.verbosity >= 1:
 
 #In[]:
 # Run selected experiments
-
+# %matplotlib widget 
 for ADC_NAME, SIGNAL in EXPERIMENTS:
     run_file, comparison = execute_experiment(
         adc_name=ADC_NAME,
@@ -171,3 +200,5 @@ for ADC_NAME, SIGNAL in EXPERIMENTS:
 
     if PLOT_RESULTS and SIMULATION.runtime.plot_intermediate:
         plot_saved_experiment(ADC_NAME, SIGNAL, SIMULATION, root=ROOT)
+
+# %%
